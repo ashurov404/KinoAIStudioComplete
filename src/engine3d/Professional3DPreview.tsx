@@ -1,8 +1,4 @@
 import React,{useEffect,useRef}from'react';
-import {runCinematicPreview} from './ProceduralCinematicEngine';
-
-export function Professional3DPreview({character,large=false}:{character:any;large?:boolean}){
- const ref=useRef<HTMLDivElement>(null);
- useEffect(()=>{if(!ref.current)return;return runCinematicPreview(ref.current,character);},[character]);
- return <div ref={ref} className={large?'sceneCanvas professionalViewport':'sceneCanvas professionalCharacter'}/>;
-}
+import {Software3DEngine} from './Software3DEngine';
+import {buildCharacter,buildEnvironment,animateCamera} from './SceneRuntime';
+export default function Professional3DPreview({character,scene='city',large=false}:{character:any;scene?:string;large?:boolean}){const ref=useRef<HTMLCanvasElement>(null);useEffect(()=>{if(!ref.current)return;const e=new Software3DEngine(ref.current);let raf=0;const loop=(ms:number)=>{e.resize();e.clear('#07090d');buildEnvironment(e,scene,ms/1000);buildCharacter(e,character,ms/1000);animateCamera(e,ms/6000,'orbit');e.drawGrid(10,1);e.render();raf=requestAnimationFrame(loop)};raf=requestAnimationFrame(loop);return()=>cancelAnimationFrame(raf)},[character,scene]);return <div className="sceneCanvas" style={{height:large?'100%':300}}><canvas ref={ref}/></div>}

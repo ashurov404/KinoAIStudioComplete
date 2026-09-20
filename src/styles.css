@@ -18,3 +18,149 @@
 .verifyBox{padding:18px;border:1px solid #e7ddd5;background:#fffaf7;border-radius:10px;margin-bottom:12px}.verifyBox svg{color:#c96524}.verifyBox h3{margin:8px 0 4px}.verifyBox p,.muted{font-size:9px;color:#817a73;line-height:1.5}
 .avatarPreview,.profileAvatar{object-fit:cover;border-radius:50%;border:2px solid #efd3bd}.avatarPreview{width:86px;height:86px;margin:10px 0}.profileHero{text-align:center}.profileHero .profileAvatar{width:76px;height:76px;display:block;margin:0 auto 12px}.settingsGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.settingsGrid>div{border:1px solid #e8e0d9;border-radius:11px;padding:16px;background:#fff}.settingsGrid svg{color:#c96524}.settingsGrid h3{font-size:11px;margin:10px 0 6px}.settingsGrid p{font-size:9px;color:#817a73;line-height:1.5}.settingsGrid select{width:100%;padding:9px;border:1px solid #ded7d0;border-radius:7px;background:#fff}.switch{display:flex!important;align-items:center;gap:8px!important;font-size:8px!important;letter-spacing:0!important;color:#817a73!important}.switch input{width:auto!important}.adminPanel{border-color:#e3c5aa;background:#fffdfa}.adminPanel .head{margin:0 0 12px}
 @media(max-width:900px){.apiSteps,.settingsGrid{grid-template-columns:1fr}.professionalChat .chatBubble{max-width:94%}}
+
+
+/* KINO_AI_STUDIO_V9_REGISTRATION */
+
+.kino-register-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 18px;
+  background: #faf9f7;
+  box-sizing: border-box;
+}
+
+.kino-register-card {
+  width: 100%;
+  max-width: 560px;
+  background: #fff;
+  border: 1px solid #e7e2dc;
+  border-radius: 24px;
+  padding: 34px;
+  box-sizing: border-box;
+  box-shadow: 0 12px 40px rgba(0,0,0,.06);
+}
+
+.kino-register-brand {
+  font-size: 12px;
+  letter-spacing: 4px;
+  font-weight: 700;
+  color: #777;
+  margin-bottom: 22px;
+}
+
+.kino-register-card h1 {
+  margin: 0 0 12px;
+  font-size: 30px;
+  line-height: 1.15;
+  color: #151515;
+}
+
+.kino-register-description {
+  color: #666;
+  line-height: 1.6;
+  margin: 0 0 26px;
+}
+
+.kino-register-field {
+  margin-bottom: 17px;
+}
+
+.kino-register-field label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 7px;
+  color: #292929;
+}
+
+.kino-register-field input {
+  width: 100%;
+  height: 52px;
+  box-sizing: border-box;
+  border: 1px solid #ddd7d0;
+  border-radius: 12px;
+  padding: 0 15px;
+  font-size: 16px;
+  outline: none;
+  background: #fff;
+}
+
+.kino-register-field input:focus {
+  border-color: #c87532;
+  box-shadow: 0 0 0 3px rgba(200,117,50,.10);
+}
+
+.kino-register-primary {
+  width: 100%;
+  height: 54px;
+  border: 0;
+  border-radius: 13px;
+  background: #c96f2d;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.kino-register-primary:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+
+.kino-register-error,
+.kino-register-success {
+  padding: 12px 14px;
+  border-radius: 11px;
+  margin: 14px 0;
+  line-height: 1.45;
+  font-size: 14px;
+}
+
+.kino-register-error {
+  background: #fff1ee;
+  color: #a43f2e;
+  border: 1px solid #f0c7bd;
+}
+
+.kino-register-success {
+  background: #eef8f0;
+  color: #27733a;
+  border: 1px solid #c8e5ce;
+}
+
+.kino-avatar-picker {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  border: 2px dashed #d5cec6;
+  margin: 28px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+  color: #777;
+  text-align: center;
+  background: #faf9f7;
+}
+
+.kino-avatar-picker img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (max-width: 600px) {
+  .kino-register-card {
+    padding: 24px 18px;
+    border-radius: 18px;
+  }
+
+  .kino-register-card h1 {
+    font-size: 26px;
+  }
+}

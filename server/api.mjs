@@ -7,12 +7,40 @@ const clientKey=process.env.STUDIO_CLIENT_KEY||'';
 const openrouterKey=process.env.OPENROUTER_API_KEY||'';
 const telegramToken=process.env.TELEGRAM_BOT_TOKEN||'';
 const adminEmail=(process.env.ADMIN_EMAIL||'ashurovabdulqodir10@gmail.com').toLowerCase();
+const PAYMENT_CARD=process.env.AD_PAYMENT_CARD||'9860 0803 9422 9159';
+const PAYMENT_NAME=process.env.AD_PAYMENT_NAME||'Mamadaliyeva Sanamhon';
 const adminChatId=process.env.TELEGRAM_ADMIN_CHAT_ID||'';
 const webhookSecret=process.env.TELEGRAM_WEBHOOK_SECRET||'';
 
 const jobs=new Map();
 const adminSessions=new Map(); // chatId -> {stage:'awaiting_request'|'awaiting_approval',plan}
 const rules=[];
+
+const advertisingRequests=new Map();
+const tgAnswerCallback=async(callbackQueryId,text,showAlert=false)=>{
+  if(!telegramToken)return null;
+  return fetch(`https://api.telegram.org/bot${telegramToken}/answerCallbackQuery`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({callback_query_id:callbackQueryId,text,show_alert:showAlert})}).then(r=>r.json());
+};
+const tgEdit=async(chatId,messageId,text)=>{
+  if(!telegramToken)return null;
+  return fetch(`https://api.telegram.org/bot${telegramToken}/editMessageText`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:chatId,message_id:messageId,text,parse_mode:'HTML'})}).then(r=>r.json());
+};
+async function handleTelegramCallback(q){
+  const data=String(q?.data||'');
+  if(!data.startsWith('ad:'))return;
+  if(adminChatId&&String(q?.message?.chat?.id)!==String(adminChatId))return;
+  const [,action,id]=data.split(':'); const item=advertisingRequests.get(id); if(!item)return tgAnswerCallback(q.id,'Chek topilmadi',true);
+  item.status=action==='approve'?'approved':'rejected'; item.reviewedAt=new Date().toISOString();
+  advertisingRequests.set(id,item);
+  await tgAnswerCallback(q.id,item.status==='approved'?'To‘lov tasdiqlandi':'To‘lov rad etildi');
+  await tgEdit(q.message.chat.id,q.message.message_id,`<b>Reklama to‘lovi</b>
+Foydalanuvchi: ${item.email}
+Holat: ${item.status==='approved'?'✅ TASDIQLANDI':'❌ RAD ETILDI'}
+
+Karta: ${PAYMENT_CARD}
+Egasi: ${PAYMENT_NAME}`);
+  if(item.userChatId)await sendTelegram(item.userChatId,item.status==='approved'?'✅ To‘lovingiz tasdiqlandi. Reklama/hamkorlik faollashtirildi.':'❌ To‘lovingiz rad etildi. Reklama/hamkorlik faollashtirilmadi.');
+}
 
 const encodeRawFrames=({frames,width,height,fps,outputPath})=>new Promise((resolve,reject)=>{
   if(!Array.isArray(frames)||!frames.length) return reject(Error('NO_FRAMES'));
@@ -108,6 +136,14 @@ const server=http.createServer(async(req,res)=>{
       catch(e){json(res,500,{ok:false,status:'failed',error:String(e?.message||e)})}
       return;
     }
+    if(req.url==='/advertising/payment'&&req.method==='POST'){
+      if(!auth(req,res))return;const p=await body(req);const id=p.id||randomUUID();const item={...p,id,status:'pending',createdAt:p.createdAt||new Date().toISOString(),reviewedAt:null};advertisingRequests.set(id,item);
+      if(adminChatId&&telegramToken){
+        const text=`<b>🧾 Yangi reklama to‘lovi</b>\nFoydalanuvchi: ${p.email||'noma’lum'}\nKarta: ${PAYMENT_CARD}\nEgasi: ${PAYMENT_NAME}\nChek: ${p.receiptName||'yuborildi'}\n\nTasdiqlash yoki rad etish tugmasini bosing.`;
+        await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:adminChatId,text,parse_mode:'HTML',reply_markup:{inline_keyboard:[[{text:'✅ Tasdiqlash',callback_data:`ad:approve:${id}`},{text:'❌ Rad etish',callback_data:`ad:reject:${id}`}],[{text:'🧾 Chek',callback_data:`ad:view:${id}`}]]}})});
+      }
+      json(res,202,{ok:true,id,status:'pending',message:'Payment review queued'});return;
+    }
     if(req.url==='/telegram/send'&&req.method==='POST'){
       if(!auth(req,res))return;const p=await body(req);if(!telegramToken)return json(res,503,{error:'TELEGRAM_BOT_TOKEN_NOT_CONFIGURED'});
       const r=await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:p.chatId,text:p.text,parse_mode:'HTML'})});
@@ -115,7 +151,7 @@ const server=http.createServer(async(req,res)=>{
     }
     if(req.url==='/telegram/webhook'&&req.method==='POST'){
       if(webhookSecret&&req.headers['x-telegram-bot-api-secret-token']!==webhookSecret)return json(res,401,{error:'INVALID_WEBHOOK_SECRET'});
-      const p=await body(req);await handleTelegramMessage(p?.message||{});json(res,200,{ok:true,received:true});return;
+      const p=await body(req);if(p?.callback_query)await handleTelegramCallback(p.callback_query);else await handleTelegramMessage(p?.message||{});json(res,200,{ok:true,received:true});return;
     }
     if(req.url==='/admin/command'&&req.method==='POST'){
       if(!auth(req,res))return;const p=await body(req);

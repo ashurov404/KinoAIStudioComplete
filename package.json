@@ -1,6 +1,6 @@
 {
   "name": "kino-ai-studio",
-  "version": "8.1.0",
+  "version": "9.0.0",
   "private": true,
   "type": "module",
   "scripts": {

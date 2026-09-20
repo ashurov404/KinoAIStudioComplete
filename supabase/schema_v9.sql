@@ -35,3 +35,45 @@ drop policy if exists studio_ad_payment_insert on public.studio_ad_payment_reque
 create policy studio_ad_payment_insert on public.studio_ad_payment_requests for insert with check (true);
 drop policy if exists studio_ad_payment_select_own on public.studio_ad_payment_requests;
 create policy studio_ad_payment_select_own on public.studio_ad_payment_requests for select using (studio_user_id = auth.uid());
+
+
+-- V9.1: real account/profile/chat/context persistence.
+create table if not exists public.studio_profiles (
+  studio_user_id uuid primary key references auth.users(id) on delete cascade,
+  studio_full_name text not null,
+  studio_email text,
+  studio_avatar_data text,
+  studio_created_at timestamptz not null default now(),
+  studio_updated_at timestamptz not null default now()
+);
+create table if not exists public.studio_project_context (
+  studio_project_id uuid primary key,
+  studio_user_id uuid not null references auth.users(id) on delete cascade,
+  studio_script text default '',
+  studio_context jsonb not null default '{}'::jsonb,
+  studio_updated_at timestamptz not null default now()
+);
+create table if not exists public.studio_api_keys (
+  studio_key_id uuid primary key default gen_random_uuid(),
+  studio_user_id uuid not null references auth.users(id) on delete cascade,
+  studio_key text not null unique,
+  studio_label text not null default 'Default API key',
+  studio_created_at timestamptz not null default now(),
+  studio_revoked_at timestamptz
+);
+alter table public.studio_profiles enable row level security;
+alter table public.studio_project_context enable row level security;
+alter table public.studio_api_keys enable row level security;
+drop policy if exists studio_profiles_owner on public.studio_profiles;
+create policy studio_profiles_owner on public.studio_profiles for all using(studio_user_id=auth.uid()) with check(studio_user_id=auth.uid());
+drop policy if exists studio_context_owner on public.studio_project_context;
+create policy studio_context_owner on public.studio_project_context for all using(studio_user_id=auth.uid()) with check(studio_user_id=auth.uid());
+drop policy if exists studio_api_keys_owner on public.studio_api_keys;
+create policy studio_api_keys_owner on public.studio_api_keys for all using(studio_user_id=auth.uid()) with check(studio_user_id=auth.uid());
+
+do $$ begin
+ if not exists(select 1 from pg_policies where policyname='studio_ad_payment_admin' and tablename='studio_ad_payment_requests') then
+  create policy studio_ad_payment_admin on public.studio_ad_payment_requests for all
+  using(public.studio_is_admin()) with check(public.studio_is_admin());
+ end if;
+end $$;

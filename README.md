@@ -28,3 +28,7 @@ SCRIPT → ANALYSIS → SCENE GRAPH → CHARACTER ASSET → RIG/MOTION → CAMER
 7. Model/renderer adapters
 
 Telefon faqat boshqaruv/UI uchun ishlatiladi; katta model va media cloud/worker qatlamida bo‘ladi.
+
+
+## V9.1
+V9.1 focuses on the seven requested UX/persistence fixes: professional context-aware AI cinema chat, Supabase persistence, verified signup/profile flow, settings, API key UX, in-chat admin payment review, and server-side OpenRouter access. The 3D direction remains an own-software engine path rather than a dependency on a hosted video-generation model.

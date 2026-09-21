@@ -19,148 +19,30 @@
 .avatarPreview,.profileAvatar{object-fit:cover;border-radius:50%;border:2px solid #efd3bd}.avatarPreview{width:86px;height:86px;margin:10px 0}.profileHero{text-align:center}.profileHero .profileAvatar{width:76px;height:76px;display:block;margin:0 auto 12px}.settingsGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.settingsGrid>div{border:1px solid #e8e0d9;border-radius:11px;padding:16px;background:#fff}.settingsGrid svg{color:#c96524}.settingsGrid h3{font-size:11px;margin:10px 0 6px}.settingsGrid p{font-size:9px;color:#817a73;line-height:1.5}.settingsGrid select{width:100%;padding:9px;border:1px solid #ded7d0;border-radius:7px;background:#fff}.switch{display:flex!important;align-items:center;gap:8px!important;font-size:8px!important;letter-spacing:0!important;color:#817a73!important}.switch input{width:auto!important}.adminPanel{border-color:#e3c5aa;background:#fffdfa}.adminPanel .head{margin:0 0 12px}
 @media(max-width:900px){.apiSteps,.settingsGrid{grid-template-columns:1fr}.professionalChat .chatBubble{max-width:94%}}
 
-
-/* KINO_AI_STUDIO_V9_REGISTRATION */
-
-.kino-register-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 18px;
-  background: #faf9f7;
-  box-sizing: border-box;
-}
-
-.kino-register-card {
-  width: 100%;
-  max-width: 560px;
-  background: #fff;
-  border: 1px solid #e7e2dc;
-  border-radius: 24px;
-  padding: 34px;
-  box-sizing: border-box;
-  box-shadow: 0 12px 40px rgba(0,0,0,.06);
-}
-
-.kino-register-brand {
-  font-size: 12px;
-  letter-spacing: 4px;
-  font-weight: 700;
-  color: #777;
-  margin-bottom: 22px;
-}
-
-.kino-register-card h1 {
-  margin: 0 0 12px;
-  font-size: 30px;
-  line-height: 1.15;
-  color: #151515;
-}
-
-.kino-register-description {
-  color: #666;
-  line-height: 1.6;
-  margin: 0 0 26px;
-}
-
-.kino-register-field {
-  margin-bottom: 17px;
-}
-
-.kino-register-field label {
-  display: block;
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 7px;
-  color: #292929;
-}
-
-.kino-register-field input {
-  width: 100%;
-  height: 52px;
-  box-sizing: border-box;
-  border: 1px solid #ddd7d0;
-  border-radius: 12px;
-  padding: 0 15px;
-  font-size: 16px;
-  outline: none;
-  background: #fff;
-}
-
-.kino-register-field input:focus {
-  border-color: #c87532;
-  box-shadow: 0 0 0 3px rgba(200,117,50,.10);
-}
-
-.kino-register-primary {
-  width: 100%;
-  height: 54px;
-  border: 0;
-  border-radius: 13px;
-  background: #c96f2d;
-  color: #fff;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  margin-top: 8px;
-}
-
-.kino-register-primary:disabled {
-  opacity: .6;
-  cursor: wait;
-}
-
-.kino-register-error,
-.kino-register-success {
-  padding: 12px 14px;
-  border-radius: 11px;
-  margin: 14px 0;
-  line-height: 1.45;
-  font-size: 14px;
-}
-
-.kino-register-error {
-  background: #fff1ee;
-  color: #a43f2e;
-  border: 1px solid #f0c7bd;
-}
-
-.kino-register-success {
-  background: #eef8f0;
-  color: #27733a;
-  border: 1px solid #c8e5ce;
-}
-
-.kino-avatar-picker {
-  width: 150px;
-  height: 150px;
-  border-radius: 50%;
-  border: 2px dashed #d5cec6;
-  margin: 28px auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  cursor: pointer;
-  color: #777;
-  text-align: center;
-  background: #faf9f7;
-}
-
-.kino-avatar-picker img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-@media (max-width: 600px) {
-  .kino-register-card {
-    padding: 24px 18px;
-    border-radius: 18px;
-  }
-
-  .kino-register-card h1 {
-    font-size: 26px;
-  }
-}
+/* V01 chat appearance: the theme switch changes the complete chat surface. */
+:root{--chat-page:#fff;--chat-panel:#fff;--chat-bubble:#000;--chat-text:#fff;--chat-border:#8a5a3b;--chat-user:#111;--chat-system:#171717}
+html[data-theme="dark"]{--chat-page:#000;--chat-panel:#000;--chat-bubble:#fff;--chat-text:#000;--chat-border:#8a5a3b;--chat-user:#f4f4f4;--chat-system:#fff}
+html[data-theme="dark"],html[data-theme="dark"] body,#root{transition:background-color .2s,color .2s}
+html[data-theme="dark"] body{background:#000;color:#fff}
+html[data-theme="dark"] .side,html[data-theme="dark"] header,html[data-theme="dark"] .panel,html[data-theme="dark"] .card,html[data-theme="dark"] .stats,html[data-theme="dark"] .movieCard{background:#0b0b0b;color:#fff;border-color:#292929}
+html[data-theme="dark"] header{background:#090909ee}
+html[data-theme="dark"] .nav,html[data-theme="dark"] .ghost,html[data-theme="dark"] .icon{color:#eee;background:#0d0d0d;border-color:#333}
+html[data-theme="dark"] .primary{color:#fff}
+html[data-theme="dark"] .panel input,html[data-theme="dark"] .panel textarea,html[data-theme="dark"] .panel select{background:#0a0a0a;color:#fff;border-color:#333}
+html[data-theme="dark"] .professionalChat{background:var(--chat-panel);border-color:var(--chat-border)}
+.professionalChat{background:var(--chat-panel);border:1px solid var(--chat-border)}
+.professionalChat .chatLog{background:var(--chat-page)}
+.professionalChat .chatBubble,.professionalChat .chatBubble.user,.professionalChat .chatBubble.ai,.professionalChat .chatBubble.system{background:var(--chat-bubble);color:var(--chat-text);border:1px solid var(--chat-border)}
+.professionalChat .chatBubble b,.professionalChat .chatBubble p{color:var(--chat-text)}
+.professionalChat .bigText{background:var(--chat-bubble);color:var(--chat-text);border-color:var(--chat-border)}
+.professionalChat .bigText::placeholder{color:color-mix(in srgb,var(--chat-text) 55%,transparent)}
+.apiSteps button{border:1px solid #e8e0d9;border-radius:10px;padding:13px;background:#fffaf7;text-align:left;color:#302b27}
+.partnerGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
+.partnerCard{display:flex;gap:11px;align-items:center;border:1px solid #e8e0d9;border-radius:11px;padding:11px;background:#fffaf7}
+.partnerCard img{width:52px;height:52px;border-radius:50%;object-fit:cover;border:1px solid #d8bda9}
+.partnerCard b{display:block;font-size:10px}.partnerCard small{display:block;color:#817a73;font-size:7px;margin-top:4px}
+.planGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.planCard{display:flex;flex-direction:column;gap:8px;text-align:left;padding:18px;border:1px solid #e6ddd5;border-radius:12px;background:#fffaf6}.planCard b{font-size:17px;color:#c96524}.planCard span{font-size:9px;color:#817a73}
+@media(max-width:900px){.partnerGrid{grid-template-columns:1fr 1fr}.planGrid{grid-template-columns:1fr}}
+@media(max-width:600px){.partnerGrid{grid-template-columns:1fr}}
+.adminRulePanel textarea{min-height:140px}.adminRulePanel{border-color:#c89a78}
+html[data-theme="dark"] .apiSteps button,html[data-theme="dark"] .partnerCard,html[data-theme="dark"] .planCard{background:#111;color:#fff;border-color:#333}

@@ -32,3 +32,9 @@ Telefon faqat boshqaruv/UI uchun ishlatiladi; katta model va media cloud/worker 
 
 ## V01.1
 V01.1 focuses on the seven requested UX/persistence fixes: professional context-aware AI cinema chat, Supabase persistence, verified signup/profile flow, settings, API key UX, in-chat admin payment review, and server-side OpenRouter access. The 3D direction remains an own-software engine path rather than a dependency on a hosted video-generation model.
+
+
+## V01.2 AI Kino chat
+- AI Kino chat now uses server-side OpenRouter conversation with a cinema-only scope guard, persistent conversation history and project context.
+- Default AI routing is the free `openrouter/free` router; the model is controlled server-side by `OPENROUTER_MODEL`.
+- Internal provider/database details are not exposed in normal-user chat responses.

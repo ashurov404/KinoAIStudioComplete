@@ -5,6 +5,7 @@ import {spawn} from 'node:child_process';
 const port=Number(process.env.PORT||8787);
 const clientKey=process.env.STUDIO_CLIENT_KEY||'';
 const openrouterKey=process.env.OPENROUTER_API_KEY||'';
+const openrouterModel=process.env.OPENROUTER_MODEL||'openrouter/free';
 const telegramToken=process.env.TELEGRAM_BOT_TOKEN||'';
 const adminEmail=(process.env.ADMIN_EMAIL||'ashurovabdulqodir10@gmail.com').toLowerCase();
 const PAYMENT_CARD=process.env.AD_PAYMENT_CARD||'9860 0803 9422 9159';
@@ -123,9 +124,42 @@ const server=http.createServer(async(req,res)=>{
       if(!auth(req,res))return;const id=req.url.split('/')[2];const job=jobs.get(id);if(!job)return json(res,404,{error:'JOB_NOT_FOUND'});json(res,200,job);return;
     }
     if(req.url==='/ai/script'&&req.method==='POST'){
-      if(!auth(req,res))return;if(!openrouterKey)return json(res,503,{error:'OPENROUTER_NOT_CONFIGURED'});
-      const p=await body(req);const r=await fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{Authorization:`Bearer ${openrouterKey}`,'Content-Type':'application/json'},body:JSON.stringify({model:p.model||'openai/gpt-4o-mini',messages:p.messages||[{role:'user',content:p.prompt||''}],temperature:.65})});
-      const j=await r.json();json(res,r.status,j);return;
+      if(!auth(req,res))return;
+      if(!openrouterKey)return json(res,503,{error:'AI_UNAVAILABLE'});
+      const p=await body(req);
+      const userText=String(p?.userText||p?.prompt||'').trim();
+      if(!userText)return json(res,400,{error:'MESSAGE_REQUIRED'});
+      const lower=userText.toLowerCase();
+      const greetings=/^(salom|assalomu alaykum|assalom|hello|hi|hey|привет|здравствуйте)([.!?, ]*)$/i.test(userText);
+      const kinoTopic=/(kino|film|fil'm|ssenariy|senariy|sahna|shot|kadr|personaj|qahramon|aktyor|dialog|kamera|yorug|chiroq|lokatsiya|muhit|montaj|rejissyor|rejissyorlik|treyler|poster|ovoz|dublyaj|lip.?sync|continuity|story|storyboard|janr|drama|komediya|triller|fantastika|reklama|hamkorlik|kino yarat|film yarat|movie|screenplay|scene|character|camera|lighting|cinematic)/i.test(lower);
+      if(!greetings&&!kinoTopic){
+        return json(res,200,{ok:true,model:openrouterModel,reply:'Kechirasiz, men belgilangan tartibdan chiqa olmayman. Men faqat AI Kino Studio’ga mos savollar va ssenariylar haqida gaplasha olaman.'});
+      }
+      const system=`Siz Kino AI Studio ichidagi samimiy, professional va kontekstli kino yordamchisisiz.
+Vazifangiz faqat kino yaratish jarayoniga yordam berish: g‘oya, ssenariy, janr, personaj, sahna, shot, kamera, yorug‘lik, muhit, dialog, ovoz, continuity, storyboard va kino loyihasini rivojlantirish.
+Oddiy salomlashuvga iliq va tabiiy javob bering, so‘ng suhbatni kino yaratish tomon olib boring.
+Foydalanuvchi boshqa mavzuga o‘tsa, aynan mana shu mazmunda qisqa javob bering: “Kechirasiz, men belgilangan tartibdan chiqa olmayman. Men faqat AI Kino Studio’ga mos savollar va ssenariylar haqida gaplasha olaman.”
+Hech qachon ichki texnik tizimlar, API provayderlari, ma’lumotlar bazasi, server, model nomi, maxfiy kalitlar yoki dasturchi tafsilotlarini oddiy foydalanuvchiga aytmang.
+Foydalanuvchiga keraksiz texnik atamalar bilan javob bermang.
+Foydalanuvchi yozgan fikrni shunchaki “qabul qilindi” demang: uni tushuning, kerak bo‘lsa aniqlashtiruvchi savollar bering va ssenariyni amalda rivojlantiring.
+Suhbatni foydalanuvchi tilida olib boring; odatda o‘zbek tilidan foydalaning.
+Oldingi suhbat va loyiha kontekstidan foydalaning. Avvalgi qarorlarni unutmasdan filmni bosqichma-bosqich davom ettiring.
+Javob tabiiy, samimiy va foydali bo‘lsin; haddan tashqari rasmiy yoki robotona bo‘lmang.`;
+      const history=Array.isArray(p.history)?p.history.slice(-20).map((m)=>({role:m?.role==='ai'?'assistant':m?.role==='user'?'user':'system',content:String(m?.text||'')})).filter(m=>m.content):[];
+      const projectContext=p.project?`
+Joriy kino loyihasi: ${JSON.stringify({title:p.project.title||'',style:p.project.style||'',script:p.project.script||'',characters:(p.project.characters||[]).map(c=>({name:c.name,role:c.role,age:c.age,notes:c.notes})),locations:(p.project.locations||[]).map(l=>({name:l.name,type:l.type,description:l.description})),shots:(p.project.shots||[]).slice(-12).map(s=>({title:s.title,duration:s.duration,camera:s.camera,lighting:s.lighting,environment:s.environment,action:s.action,dialogue:s.dialogue,emotion:s.emotion}))})}`:'';
+      const rulesText=Array.isArray(p.rules)&&p.rules.length?`
+Faol kino qoidalari:
+${p.rules.filter(r=>r&&r.active!==false).map(r=>'- '+String(r.text||r.request||'')).join('\n')}`:'';
+      const messages=[{role:'system',content:system+projectContext+rulesText},...history,{role:'user',content:userText}];
+      try{
+        const r=await fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{Authorization:`Bearer ${openrouterKey}`,'Content-Type':'application/json','HTTP-Referer':process.env.APP_URL||'http://localhost:5173','X-Title':'Kino AI Studio'},body:JSON.stringify({model:openrouterModel,messages,temperature:.78,max_tokens:900})});
+        const j=await r.json();
+        if(!r.ok)return json(res,502,{error:'AI_TEMPORARILY_UNAVAILABLE'});
+        const reply=j?.choices?.[0]?.message?.content?.trim()||'';
+        if(!reply)return json(res,502,{error:'AI_EMPTY_RESPONSE'});
+        return json(res,200,{ok:true,model:openrouterModel,reply});
+      }catch(e){return json(res,502,{error:'AI_TEMPORARILY_UNAVAILABLE'});}
     }
 
     if(req.url==='/render/encode'&&req.method==='POST'){

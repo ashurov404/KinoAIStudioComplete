@@ -56,305 +56,35 @@ function App(){
  async function loadProjects(){if(!sb||!session?.user?.id){setProjects(read('kino_local_projects',[]));return}const{data}=await sb.from('studio_projects').select('*').eq('studio_owner_id',session.user.id).order('studio_created_at',{ascending:false});const base=(data||[]).map((p:any)=>({...starter(),id:p.studio_project_id,title:p.studio_name,status:p.studio_status,script:p.studio_description||'',createdAt:p.studio_created_at,ownerName:p.studio_owner_name,ownerEmail:p.studio_owner_email,public:p.studio_public}));const{data:ctx}=await sb.from('studio_project_context').select('studio_project_id,studio_context').eq('studio_user_id',session.user.id);const byId:any={};(ctx||[]).forEach((x:any)=>{if(x.studio_context?.project)byId[x.studio_project_id]=x.studio_context.project});setProjects(base.map((p:any)=>byId[p.id]?{...p,...byId[p.id]}:p));}
  async function save(){const u=session?.user||session;const item={...project,script,ownerName:u?.user_metadata?.full_name||u?.name||u?.email,ownerEmail:u?.email};const arr=read('kino_local_projects',[]);write('kino_local_projects',[item,...arr.filter((x:any)=>x.id!==item.id)]);setProjects([item,...arr.filter((x:any)=>x.id!==item.id)]);if(sb&&u?.id){await sb.from('studio_projects').upsert({studio_project_id:item.id,studio_owner_id:u.id,studio_name:item.title,studio_description:item.script,studio_status:item.status,studio_created_at:item.createdAt,studio_updated_at:new Date().toISOString(),studio_public:item.public??false,studio_owner_name:item.ownerName,studio_owner_email:item.ownerEmail});await sb.from('studio_project_context').upsert({studio_project_id:item.id,studio_user_id:u.id,studio_script:item.script,studio_context:{project:item},studio_updated_at:new Date().toISOString()});}setSaved(true);setTimeout(()=>setSaved(false),1200)}
  async function auth(){
-   const normalizedEmail=email.trim().toLowerCase();
-   const strongPassword=/^(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
-
-   if(!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)){
-     setMsg('Email manzilini to‘g‘ri kiriting.');
-     return false;
-   }
-
-   if(authMode==='signup' && !fullName.trim()){
-     setMsg('Ism va familiyangizni kiriting.');
-     return false;
-   }
-
-   if(!strongPassword.test(pass)){
-     setMsg('Parol kamida 8 belgidan iborat bo‘lsin va kamida 1 ta raqam hamda 1 ta maxsus belgi bo‘lsin.');
-     return false;
-   }
-
-   setMsg('');
-
+   if(!email||pass.length<6){setMsg('Email va kamida 6 belgili parol kiriting.');return}
+   if(authMode==='signup' && !fullName.trim()){setMsg('Avval ismingizni kiriting.');return}
    if(sb){
      if(authMode==='signup'){
-       const r=await sb.auth.signUp({
-         email:normalizedEmail,
-         password:pass,
-         options:{
-           data:{
-             full_name:fullName.trim()
-           }
-         }
-       });
-
-       if(r.error){
-         const em=String(r.error.message||'').toLowerCase();
-
-         if(em.includes('already registered')||em.includes('already been registered')){
-           setMsg('Bu email allaqachon ro‘yxatdan o‘tgan. Kirish oynasidan foydalaning.');
-         }else{
-           setMsg(r.error.message||'Ro‘yxatdan o‘tishda xatolik yuz berdi.');
-         }
-
-         return false;
-       }
-
-       setEmail(normalizedEmail);
-
+       const r=await sb.auth.signUp({email,password:pass,options:{data:{full_name:fullName.trim()}}});
+       if(r.error){setMsg(r.error.message);return}
        if(r.data.user){
-         await sb.from('studio_profiles').upsert({
-           studio_user_id:r.data.user.id,
-           studio_full_name:fullName.trim(),
-           studio_email:normalizedEmail,
-           studio_avatar_data:avatar||null
-         });
+         if(avatar) await sb.from('studio_profiles').upsert({studio_user_id:r.data.user.id,studio_full_name:fullName.trim(),studio_avatar_data:avatar,studio_email:email});
+         else await sb.from('studio_profiles').upsert({studio_user_id:r.data.user.id,studio_full_name:fullName.trim(),studio_email:email});
        }
-
-       setMsg('Tasdiqlash kodi emailingizga yuborildi.');
-       return true;
+       if(r.data.session){setSession(r.data.session);setMsg('Akkaunt yaratildi.')}
+       else setMsg('Email tasdiqlash kodi yuborildi. Emailingizni tasdiqlab, keyin kiring.');
+     }else{
+       const r=await sb.auth.signInWithPassword({email,password:pass});
+       if(r.error){setMsg(r.error.message);return}
+       setSession(r.data.session);
      }
-
-     const r=await sb.auth.signInWithPassword({
-       email:normalizedEmail,
-       password:pass
-     });
-
-     if(r.error){
-       const em=String(r.error.message||'').toLowerCase();
-
-       if(em.includes('email not confirmed')){
-         setMsg('Email hali tasdiqlanmagan. Emailingizga kelgan tasdiqlash kodini kiriting.');
-       }else if(
-         em.includes('invalid login credentials') ||
-         em.includes('invalid credentials') ||
-         em.includes('invalid_grant') ||
-         em.includes('wrong password') ||
-         em.includes('invalid password')
-       ){
-         setMsg('Parol noto‘g‘ri.');
-       }else{
-         setMsg('Email yoki parol noto‘g‘ri.');
-       }
-
-       return false;
-     }
-
-     setSession(r.data.session);
-     setMsg('');
-     return true;
+     return;
    }
-
-   const users=read('kino_local_users',[]);
-   let u=users.find((x:any)=>x.email===normalizedEmail);
-
+   const users=read('kino_local_users',[]);let u=users.find((x:any)=>x.email===email);
    if(authMode==='signup'){
-     if(u){
-       setMsg('Bu email allaqachon mavjud. Kirish oynasidan foydalaning.');
-       return false;
-     }
-
-     u={
-       id:uid(),
-       email:normalizedEmail,
-       password:pass,
-       name:fullName.trim(),
-       avatar,
-       isAdmin:normalizedEmail===ADMIN,
-       verified:false
-     };
-
-     write('kino_local_users',[...users,u]);
-
-     const code=String(Math.floor(100000+Math.random()*900000));
-
-     write('kino_pending_verify',{
-       email:normalizedEmail,
-       code,
-       name:fullName.trim(),
-       avatar
-     });
-
-     setMsg('Tasdiqlash kodi tayyor.');
-     return true;
-   }
-
-   if(!u){
-     setMsg('Email yoki parol noto‘g‘ri.');
-     return false;
-   }
-
-   if(u.password!==pass){
-     setMsg('Parol noto‘g‘ri.');
-     return false;
-   }
-
-   if(u.verified===false){
-     setMsg('Email hali tasdiqlanmagan. Email tasdiqlash bosqichini yakunlang.');
-     return false;
-   }
-
-   const sess={
-     user:{
-       id:u.id,
-       email:u.email,
-       user_metadata:{
-         full_name:u.name,
-         avatar_url:u.avatar
-       }
-     },
-     email:u.email,
-     isAdmin:u.isAdmin
-   };
-
-   write('kino_session',sess);
-   setSession(sess);
-   setMsg('');
-   return true;
- }
-
- async function resendVerifyCode(){
-   const normalizedEmail=email.trim().toLowerCase();
-
-   if(!normalizedEmail){
-     setMsg('Avval emailni kiriting.');
-     return false;
-   }
-
-   if(sb){
-     const r=await sb.auth.signInWithOtp({
-       email:normalizedEmail,
-       options:{
-         shouldCreateUser:false
-       }
-     });
-
-     if(r.error){
-       const em=String(r.error.message||'').toLowerCase();
-
-       if(em.includes('rate limit')||em.includes('too many')){
-         setMsg('Kod yaqinda yuborilgan. Biroz kutib qayta urinib ko‘ring.');
-       }else{
-         setMsg('Tasdiqlash kodi qayta yuborilmadi.');
-       }
-
-       return false;
-     }
-
-     setMsg('Yangi tasdiqlash kodi emailingizga yuborildi.');
-     return true;
-   }
-
-   const p=read('kino_pending_verify',null);
-
-   if(!p || p.email!==normalizedEmail){
-     setMsg('Avval ro‘yxatdan o‘tishni boshlang.');
-     return false;
-   }
-
-   const code=String(Math.floor(100000+Math.random()*900000));
-
-   write('kino_pending_verify',{
-     ...p,
-     code
-   });
-
-   setMsg('Yangi tasdiqlash kodi yaratildi.');
-   return true;
- }
-
- function verifyEmail(){
-   const normalizedEmail=email.trim().toLowerCase();
-   const token=verifyCode.trim();
-
-   if(!/^\d{6}$/.test(token)){
-     setMsg('Emailga kelgan 6 xonali tasdiqlash kodini kiriting.');
-     return Promise.resolve(false);
-   }
-
-   if(!sb){
-     const pending=read('kino_pending_verify',null);
-
-     if(
-       !pending ||
-       pending.email!==normalizedEmail ||
-       pending.code!==token
-     ){
-       setMsg('Tasdiqlash kodi noto‘g‘ri.');
-       return Promise.resolve(false);
-     }
-
-     const users=read('kino_local_users',[]).map((u:any)=>
-       u.email===normalizedEmail
-         ? {...u,verified:true,avatar:avatar||u.avatar}
-         : u
-     );
-
-     write('kino_local_users',users);
-
-     const u=users.find((x:any)=>x.email===normalizedEmail);
-
-     if(!u){
-       setMsg('Akkaunt topilmadi.');
-       return Promise.resolve(false);
-     }
-
-     const sess={
-       user:{
-         id:u.id,
-         email:u.email,
-         user_metadata:{
-           full_name:u.name,
-           avatar_url:u.avatar
-         }
-       },
-       email:u.email,
-       isAdmin:u.isAdmin
-     };
-
-     write('kino_session',sess);
-     setSession(sess);
-     localStorage.removeItem('kino_pending_verify');
-
-     setMsg('Email muvaffaqiyatli tasdiqlandi.');
-     return Promise.resolve(true);
-   }
-
-   return sb.auth.verifyOtp({
-     email:normalizedEmail,
-     token,
-     type:'signup'
-   }).then(async(r:any)=>{
-     if(r.error){
-       setMsg('Tasdiqlash kodi noto‘g‘ri yoki muddati tugagan.');
-       return false;
-     }
-
-     if(r.data.user){
-       await sb.auth.updateUser({
-         password:pass,
-         data:{
-           full_name:fullName.trim() || r.data.user.user_metadata?.full_name || ''
-         }
-       });
-
-       await sb.from('studio_profiles').upsert({
-         studio_user_id:r.data.user.id,
-         studio_full_name:fullName.trim() || r.data.user.user_metadata?.full_name || '',
-         studio_email:normalizedEmail,
-         studio_avatar_data:avatar||null
-       });
-     }
-
-     setSession(r.data.session);
-     setMsg('Email muvaffaqiyatli tasdiqlandi.');
-     return true;
-   }).catch(()=>{
-     setMsg('Tasdiqlash kodi noto‘g‘ri yoki muddati tugagan.');
-     return false;
-   });
- }
-
+     if(u){setMsg('Bu email allaqachon mavjud.');return}
+     u={id:uid(),email,password:pass,name:fullName.trim(),avatar,isAdmin:email.toLowerCase()===ADMIN,verified:false};
+     write('kino_local_users',[...users,u]);const code=String(Math.floor(100000+Math.random()*900000));write('kino_pending_verify',{email,code,name:fullName.trim(),avatar});setMsg(`Tasdiqlash kodi: ${code}`);return
+   }else if(!u||u.password!==pass){setMsg('Email yoki parol noto‘g‘ri.');return}
+   const sess={user:{id:u.id,email:u.email,user_metadata:{full_name:u.name,avatar_url:u.avatar}},email:u.email,isAdmin:u.isAdmin};
+   write('kino_session',sess);setSession(sess);
+ } 
+ async function verifyEmail(){if(!verifyCode.trim()){setMsg('Emailga kelgan tasdiqlash kodini kiriting.');return false}if(!sb){const p=read('kino_pending_verify',null);if(!p||p.email!==email||p.code!==verifyCode.trim()){setMsg('Tasdiqlash kodi noto‘g‘ri.');return false}const users=read('kino_local_users',[]).map((u:any)=>u.email===email?{...u,verified:true,avatar}:u);write('kino_local_users',users);const u=users.find((x:any)=>x.email===email);const sess={user:{id:u.id,email:u.email,user_metadata:{full_name:u.name,avatar_url:u.avatar}},email:u.email,isAdmin:u.isAdmin};write('kino_session',sess);setSession(sess);localStorage.removeItem('kino_pending_verify');return true} const r=await sb.auth.verifyOtp({email,token:verifyCode.trim(),type:'signup'});if(r.error){setMsg(r.error.message);return false}setSession(r.data.session);if(r.data.user)await sb.from('studio_profiles').upsert({studio_user_id:r.data.user.id,studio_full_name:fullName.trim(),studio_email:email,studio_avatar_data:avatar||null});return true}
  function logout(){localStorage.removeItem('kino_session');sb?.auth.signOut();setSession(null);setIsAdmin(false);setPage('home')}
  const go=(n:string)=>{setPage(n);setOpen(false)};
  const nav:any[]=[['home',T('home',language),Clapperboard],['create',T('create',language),Film],['projects',T('projects',language),FolderKanban],['integrations',T('integrations',language),Bot],['collab',T('collab',language),Handshake],['partners',T('partners',language),CreditCard],['profile',T('profile',language),UserCircle],['settings',T('settings',language),Settings]];
@@ -430,7 +160,7 @@ function Profile({session,mode,setMode,email,setEmail,pass,setPass,msg,auth,proj
  const pick=(e:any)=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>setAvatar(String(r.result||''));r.readAsDataURL(f)};
  const submit=()=>{auth()};
  if(session)return <div className="page"><section className="profile profileHero">{session.user?.user_metadata?.avatar_url||session.avatar?<img src={session.user?.user_metadata?.avatar_url||session.avatar} className="profileAvatar"/>:<UserCircle size={54}/>}<div className="eyebrow">PROFILE</div><h2>{session.user?.user_metadata?.full_name||session.user?.email||session.email}</h2><p>{session.user?.email||session.email}</p></section><div className="stats"><div><b>{projects.length}</b><small>LOYIHALAR</small></div><div><b>{read('kino_saved_movies',[]).length}</b><small>SAQLANGAN</small></div><div><b>{projects.filter((p:any)=>p.status==='analyzed').length}</b><small>TAHLIL QILINGAN</small></div><div><b>AI</b><small>KINO STUDIO</small></div></div><section className="panel" style={{marginTop:14}}><h3>Mening loyihalarim</h3>{projects.map((p:any)=><div className="shot" key={p.id}><Film/><div><b>{p.title}</b><small>{p.status}</small></div><button className="ghost" onClick={()=>go('create')}><Eye/></button></div>)}</section></div>;
- return <div className="page authPage"><div className="authTitle"><div className="eyebrow">KINO AI STUDIO</div><h2>{mode==='login'?'Xush kelibsiz':'Professional akkaunt yarating'}</h2><p>{mode==='login'?'Akkauntingizga kiring.':'Ism, email va parol orqali akkaunt yarating; email tasdig‘idan so‘ng profil rasmini qo‘shing.'}</p></div><section className="panel authbox">{mode==='signup'&&<><div className="stepper"><span className={stage>=1?'on':''}>1 Ma’lumot</span><span className={stage>=2?'on':''}>2 Email</span><span className={stage>=3?'on':''}>3 Profil</span></div>{stage===1&&<><label>ISM</label><input value={fullName} onChange={e=>setFullName(e.target.value)} placeholder="Ism va familiya"/><label>EMAIL</label><input value={email} onChange={e=>setEmail(e.target.value)} placeholder="email@example.com"/><label>PAROL</label><input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="Kamida 8 belgi, raqam va maxsus belgi"/><button className="primary full" onClick={async()=>{const ok=await submit();if(ok)setStage(2)}}>Davom etish</button></>}{stage===2&&<><div className="verifyBox"><Mail/><h3>Emailni tasdiqlang</h3><p>Emailingizga kelgan tasdiqlash kodini kiriting.</p><input value={verifyCode} onChange={e=>setVerifyCode(e.target.value)} inputMode="numeric" placeholder="6 xonali kod"/></div><button className="primary full" onClick={async()=>{const ok=await verifyEmail();if(ok)setStage(3)}}>Emailni tasdiqlash</button><button className="text" onClick={resendVerifyCode}>Kodni qayta yuborish</button></>}{stage===3&&<><label>PROFIL RASMI</label><input type="file" accept="image/*" onChange={pick}/>{avatar&&<img src={avatar} className="avatarPreview"/>}<p className="muted">Email tasdiqlangandan keyin profilingiz shu ism bilan ishlaydi.</p><button className="primary full" onClick={async()=>{if(sb&&session?.user?.id)await sb.from('studio_profiles').upsert({studio_user_id:session.user.id,studio_full_name:fullName.trim(),studio_email:email,studio_avatar_data:avatar||null});write('kino_profile',{name:fullName,email,avatar});go('create')}}>Profilni saqlash</button></>}{msg&&<div className="notice">{msg}</div>}</>}{mode==='login'&&<><label>EMAIL</label><input value={email} onChange={e=>setEmail(e.target.value)} placeholder="email@example.com"/><label>PAROL</label><input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="••••••••"/><button className="primary full" onClick={submit}>Kirish</button>{msg&&<div className="notice">{msg}</div>}</>}<button className="text" onClick={()=>{setMode(mode==='login'?'signup':'login');setMsg('');setStage(1)}}>{mode==='login'?'Yangi akkaunt yaratish':'Akkauntim bor — kirish'}</button></section></div>
+ return <div className="page authPage"><div className="authTitle"><div className="eyebrow">KINO AI STUDIO</div><h2>{mode==='login'?'Xush kelibsiz':'Professional akkaunt yarating'}</h2><p>{mode==='login'?'Akkauntingizga kiring.':'Ism, email va parol orqali akkaunt yarating; email tasdig‘idan so‘ng profil rasmini qo‘shing.'}</p></div><section className="panel authbox">{mode==='signup'&&<><div className="stepper"><span className={stage>=1?'on':''}>1 Ma’lumot</span><span className={stage>=2?'on':''}>2 Email</span><span className={stage>=3?'on':''}>3 Profil</span></div>{stage===1&&<><label>ISM</label><input value={fullName} onChange={e=>setFullName(e.target.value)} placeholder="Ism va familiya"/><label>EMAIL</label><input value={email} onChange={e=>setEmail(e.target.value)} placeholder="email@example.com"/><label>PAROL</label><input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="Kamida 6 belgi"/><button className="primary full" onClick={async()=>{if(fullName&&email&&pass.length>=6){await submit();setStage(2)}else setMsg('Ism, email va kamida 6 belgili parolni kiriting.')}}>Davom etish</button></>}{stage===2&&<><div className="verifyBox"><Mail/><h3>Emailni tasdiqlang</h3><p>Emailingizga kelgan tasdiqlash kodini kiriting.</p><input value={verifyCode} onChange={e=>setVerifyCode(e.target.value)} inputMode="numeric" placeholder="6 xonali kod"/></div><button className="primary full" onClick={async()=>{const ok=await verifyEmail();if(ok)setStage(3)}}>Emailni tasdiqlash</button></>}{stage===3&&<><label>PROFIL RASMI</label><input type="file" accept="image/*" onChange={pick}/>{avatar&&<img src={avatar} className="avatarPreview"/>}<p className="muted">Email tasdiqlangandan keyin profilingiz shu ism bilan ishlaydi.</p><button className="primary full" onClick={async()=>{if(sb&&session?.user?.id)await sb.from('studio_profiles').upsert({studio_user_id:session.user.id,studio_full_name:fullName.trim(),studio_email:email,studio_avatar_data:avatar||null});write('kino_profile',{name:fullName,email,avatar});go('create')}}>Profilni saqlash</button></>}{msg&&<div className="notice">{msg}</div>}</>}{mode==='login'&&<><label>EMAIL</label><input value={email} onChange={e=>setEmail(e.target.value)} placeholder="email@example.com"/><label>PAROL</label><input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="••••••••"/><button className="primary full" onClick={submit}>Kirish</button>{msg&&<div className="notice">{msg}</div>}</>}<button className="text" onClick={()=>{setMode(mode==='login'?'signup':'login');setMsg('');setStage(1)}}>{mode==='login'?'Yangi akkaunt yaratish':'Akkauntim bor — kirish'}</button></section></div>
 }
 function SettingsPage({session,logout,setAuthMode,go,language}:any){
  const defaults={language:'uz',notifications:true,theme:'light',aiVoice:'neutral'};
